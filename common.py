@@ -34,6 +34,14 @@ def hello_encode():
     ba.extend(i.to_bytes(length=2, byteorder='big'))
     return ba
 
+def hello_decode(msg):
+    """
+    Decodifica uma mensagem em binário do tipo Hello.
+    Verifica seu tamanho e id, levanta uma exceção se houver algo errado
+    """
+    assert msgId(msg) == 1
+    assert len(msg) == 2
+
 def connection_encode(porta):
     """
     Cria uma mensagem do tipo Connection: 
@@ -47,14 +55,6 @@ def connection_encode(porta):
     ba.extend(i.to_bytes(length=2, byteorder='big'))
     ba.extend(porta.to_bytes(length=4, byteorder='big'))
     return ba
-
-def hello_decode(msg):
-    """
-    Decodifica uma mensagem em binário do tipo Hello.
-    Verifica seu tamanho e id, levanta uma exceção se houver algo errado
-    """
-    assert msgId(msg) == 1
-    assert len(msg) == 2
 
 def connection_decode(msg):
     """
@@ -114,3 +114,59 @@ def info_file_decode(msg):
     nome = nome.strip('\x00')       # Remove possíveis zeros à esquerda 
     tam = int.from_bytes(b_size, "big")
     return (nome, tam) 
+
+def ok_encode():
+    """
+    Cria uma mensagem do tipo OK: apenas 2 bytes, representando o 4
+    """
+    ba = bytearray()
+    i = 4
+    ba.extend(i.to_bytes(length=2, byteorder='big'))
+    return ba
+
+def ok_decode(msg):
+    """
+    Decodifica uma mensagem em binário do tipo OK.
+    Verifica seu tamanho e id, levanta uma exceção se houver algo errado
+    """
+    assert msgId(msg) == 4
+    assert len(msg) == 2
+
+def fim_encode():
+    """
+    Cria uma mensagem do tipo FIM: apenas 2 bytes, representando o 5
+    """
+    ba = bytearray()
+    i = 5
+    ba.extend(i.to_bytes(length=2, byteorder='big'))
+    return ba
+
+def fim_decode(msg):
+    """
+    Decodifica uma mensagem em binário do tipo FIM.
+    Verifica seu tamanho e id, levanta uma exceção se houver algo errado
+    """
+    assert msgId(msg) == 5
+    assert len(msg) == 2
+
+def file_encode():
+    pass
+def file_decode():
+    pass
+
+def ack_encode():
+    """
+    Cria uma mensagem do tipo ACK: apenas 2 bytes, representando o 7
+    """
+    ba = bytearray()
+    i = 7
+    ba.extend(i.to_bytes(length=2, byteorder='big'))
+    return ba
+
+def ack_decode(msg):
+    """
+    Decodifica uma mensagem em binário do tipo ACK.
+    Verifica seu tamanho e id, levanta uma exceção se houver algo errado
+    """
+    assert msgId(msg) == 7
+    assert len(msg) == 2

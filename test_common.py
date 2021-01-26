@@ -22,6 +22,50 @@ class TestHello:
             ba.extend(i.to_bytes(length=2, byteorder='big'))
             common.hello_decode(ba)
     
+class TestOk:
+    def test_ok_msg(self):
+        ba = bytearray()
+        i = 4
+        ba.extend(i.to_bytes(length=2, byteorder='big'))
+        assert ba == common.ok_encode()
+    
+    def test_ok_decode(self):
+        common.ok_decode(common.ok_encode())
+        with pytest.raises(Exception) as e_info:
+            ba = bytearray()
+            i = 80
+            ba.extend(i.to_bytes(length=2, byteorder='big'))
+            common.ok_decode(ba)
+
+class TestFim:
+    def test_fim_msg(self):
+        ba = bytearray()
+        i = 5
+        ba.extend(i.to_bytes(length=2, byteorder='big'))
+        assert ba == common.fim_encode()
+    
+    def test_fim_decode(self):
+        common.fim_decode(common.fim_encode())
+        with pytest.raises(Exception) as e_info:
+            ba = bytearray()
+            i = 80
+            ba.extend(i.to_bytes(length=2, byteorder='big'))
+            common.fim_decode(ba)
+
+class TestAck:
+    def test_ack_msg(self):
+        ba = bytearray()
+        i = 7
+        ba.extend(i.to_bytes(length=2, byteorder='big'))
+        assert ba == common.ack_encode()
+    
+    def test_ack_decode(self):
+        common.ack_decode(common.ack_encode())
+        with pytest.raises(Exception) as e_info:
+            ba = bytearray()
+            i = 80
+            ba.extend(i.to_bytes(length=2, byteorder='big'))
+            common.ack_decode(ba)
 class TestConnection:
     def test_connection_msg(self):
         ba = bytearray()
