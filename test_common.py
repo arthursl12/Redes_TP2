@@ -2,10 +2,14 @@ import pytest
 import binascii
 import common
 
-class Test01:
+class TestId:
     def test_msgId(self):
         assert common.msgId(common.hello_encode()) == 1
         assert common.msgId(common.connection_encode(40532)) == 2
+        assert common.msgId(common.info_file_encode("teste1.txt",135)) == 3
+        assert common.msgId(common.ok_encode()) == 4
+        assert common.msgId(common.fim_encode()) == 5
+        assert common.msgId(common.ack_encode()) == 7
 
 class TestHello:
     def test_hello_msg(self):
