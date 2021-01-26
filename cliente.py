@@ -47,19 +47,47 @@ def main():
     
     # Valida IPv4 ou IPv6 passado e usa a mesma versão
     if validIPv4(args.ip):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     elif validIPv6(args.ip):
-        s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        tcp_socket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
     else:
        logexit("Protocolo desconhecido")
        
     # Conecta com o servidor
-    s.connect((args.ip, args.porta))
-    print("[log] Enviando mensagem")
-    s.sendall(common.hello_encode())
+    tcp_socket.connect((args.ip, args.porta))
+    infoCliente = tcp_socket.getsockname()
+    
+    # Envia a mensagem Hello
+    print("[log] Enviando hello")
+    tcp_socket.sendall(common.hello_encode())
+    
+    # Recebe a mensagem Connection do servidor, com o número da porta
+    data = tcp_socket.recv(1024)
+    # print(f"[log] Mensagem: {data}")
+    data = bytearray(data)
+    tipo = common.msgId(data)
+    print(f"[log] \tTipo da mensagem: {tipo}")
+    if (tipo != 2):
+        logexit("Mensagem de Connection inválida")
+    
+    porta = common.connection_decode(data)
+    print(f"[log] Recebido a porta UDP {porta}")
+    # Cria socket UDP
+    if validIPv4(args.ip):
+        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    elif validIPv6(args.ip):
+        udp_socket = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+    else:
+        logexit("Protocolo desconhecido")
+    
+    # Conecta ao socket UDP do servidor
+    udp_socket.bind((infoCliente[0],0)) 
+    # udp_socket.sendto(b"teste",(args.ip, porta))
+    # print(f"[udp] Enviando arquivo pelo socket UDP, com porta {porta}")
+    
     # s.sendall(b"Hello, world")
-    data = s.recv(1024)
-    s.close()
+    data = tcp_socket.recv(1024)
+    tcp_socket.close()
     print('Received', repr(data))
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from common import msgId
+import common 
 import queue
 import select
 import socket
@@ -12,11 +12,13 @@ def logexit(err):
     print(err)
     sys.exit(1)
 
-def multi_threaded_client(connection):
+def multi_threaded_client(client, server):
     # connection.send(str.encode('Server is working:'))
-    infoClient = connection.getsockname()
+    infoClient = client.getsockname()
+    infoServer = server.getsockname()
+    
     while True:
-        data = connection.recv(2048)
+        data = client.recv(2048)
         if (len(data) == 0):
             print(f"[log] Cliente {infoClient[0]}: {infoClient[1]} " +
                   "encerrou a conexão")
@@ -25,10 +27,37 @@ def multi_threaded_client(connection):
             data = bytearray(data)
             print(f"[log] Mensagem recebida de {infoClient[0]}: {infoClient[1]}")
             # print(f"[log] Mensagem: {data}")
-            print(f"[log] \tTipo da mensagem: {msgId(data)}")
-            response = 'Server message: ' + data.decode('utf-8')
-            connection.sendall(str.encode(response))
-    connection.close()
+            print(f"[log] \tTipo da mensagem: {common.msgId(data)}")
+            if (common.msgId(data) == 1):
+                # Recebeu mensagem Hello
+                # Cria o socket UDP
+                udtS = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                print(f"[udp] Socket UDP criado")
+                
+                # Usa o mesmo IP, mas uma porta dada pelo sistema
+                udtS.bind((infoServer[0],0))
+                infoUdt = udtS.getsockname()
+                print(f"[udp] Socket com endereço: {infoUdt[0]}: {infoUdt[1]}")
+                
+                # Manda a mensagem Connection com o número da porta para 
+                # o cliente
+                b_con = common.connection_encode(infoUdt[1])
+                client.sendall(b_con)
+            elif (common.msgId(data) == 3):
+                # Recebeu mensagem Info_file
+                
+                
+                
+                
+                
+                # print(f"[udp] Aguardando udp: {infoUdt[0]}: {infoUdt[1]}")
+                # data, addr = udtS.recvfrom(1024)
+                # print(f"[udp] Recebido: {data}")
+                
+                
+            # response = 'Server message: ' + data.decode('utf-8')
+            # client.sendall(str.encode(response))
+    client.close()
 
 def main():
     # Parse dos argumentos
@@ -62,7 +91,7 @@ def main():
         Client, address = server.accept()
         print('[log] Conexão com sucesso: '+ address[0] 
               + ':' + str(address[1]))
-        start_new_thread(multi_threaded_client, (Client, ))
+        start_new_thread(multi_threaded_client, (Client, server))
         ThreadCount += 1
         print("Número da Thread: " + str(ThreadCount))
     print("[log] Finalizando servidor")
