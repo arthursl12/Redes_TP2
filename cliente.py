@@ -3,6 +3,7 @@
 import socket
 import argparse
 import sys
+import common
 
 def logexit(err):
     print(err)
@@ -54,7 +55,9 @@ def main():
        
     # Conecta com o servidor
     s.connect((args.ip, args.porta))
-    s.sendall(b"Hello, world")
+    print("[log] Enviando mensagem")
+    s.sendall(common.hello_encode())
+    # s.sendall(b"Hello, world")
     data = s.recv(1024)
     s.close()
     print('Received', repr(data))

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from common import msgId
 import queue
 import select
 import socket
@@ -12,13 +13,21 @@ def logexit(err):
     sys.exit(1)
 
 def multi_threaded_client(connection):
-    connection.send(str.encode('Server is working:'))
+    # connection.send(str.encode('Server is working:'))
+    infoClient = connection.getsockname()
     while True:
         data = connection.recv(2048)
-        response = 'Server message: ' + data.decode('utf-8')
-        if not data:
+        if (len(data) == 0):
+            print(f"[log] Cliente {infoClient[0]}: {infoClient[1]} " +
+                  "encerrou a conexão")
             break
-        connection.sendall(str.encode(response))
+        if data is not None:
+            data = bytearray(data)
+            print(f"[log] Mensagem recebida de {infoClient[0]}: {infoClient[1]}")
+            # print(f"[log] Mensagem: {data}")
+            print(f"[log] \tTipo da mensagem: {msgId(data)}")
+            response = 'Server message: ' + data.decode('utf-8')
+            connection.sendall(str.encode(response))
     connection.close()
 
 def main():
@@ -41,7 +50,7 @@ def main():
     try:
         server.bind(('', args.porta))
     except socket.error as e:
-        print(str(e))
+        logexit(str(e))
     
     infoServer = server.getsockname()
     print (f"[log] Aguardando conexões em {infoServer[0]}, {infoServer[1]}")
@@ -51,10 +60,12 @@ def main():
     ThreadCount = 0
     while True:
         Client, address = server.accept()
-        print('Connected to: ' + address[0] + ':' + str(address[1]))
+        print('[log] Conexão com sucesso: '+ address[0] 
+              + ':' + str(address[1]))
         start_new_thread(multi_threaded_client, (Client, ))
         ThreadCount += 1
-        print('Thread Number: ' + str(ThreadCount))
+        print("Número da Thread: " + str(ThreadCount))
+    print("[log] Finalizando servidor")
     server.close()
 
 
