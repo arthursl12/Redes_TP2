@@ -10,15 +10,16 @@ FILE        6
 ACK         7
 '''
 MAX_FILENAME_SIZE = 15
+WINDOW_SIZE = 5
 
 def msgId(b_msg):
-    '''
+    """
     Dada uma mensagem em bytes 'b_msg', retorna o inteiro referente à qual tipo 
     de mensagem ela é. 
 
     Isso é representado pelos dois primeiros bytes da mensagem.
     O código correspondente da cada mensagem está na especificação
-    '''
+    """
     assert type(b_msg) == bytearray
     assert len(b_msg) >= 2
     
