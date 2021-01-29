@@ -45,8 +45,15 @@ def multi_threaded_client(client, server):
                 client.sendall(b_con)
             elif (common.msgId(data) == 3):
                 # Recebeu mensagem Info_file
+                nome, tam = common.info_file_decode(data)
+                print(f"[udp] Informações do arquivo: {nome}: {tam}")
+
                 
+                ### TODO: Alocar estruturas para janela deslizante
                 
+                print(f"[udp] Enviando OK")
+                # Envia o OK para o cliente
+                client.sendall(common.ok_encode())
                 
                 
                 

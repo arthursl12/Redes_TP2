@@ -99,9 +99,8 @@ def info_file_encode(nome_arq, size):
 def info_file_decode(msg):
     """
     Decodifica uma mensagem em binário do tipo Info File.
-    Retorna 
-        - O nome do arquivo (string)
-        - O seu tamanho em bytes (inteiro)
+    Retorna uma tupla com o nome do arquivo (string) e o seu tamanho em bytes 
+    (inteiro)
     """
     assert msgId(msg) == 3
     assert len(msg) == 25

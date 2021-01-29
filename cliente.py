@@ -69,9 +69,9 @@ def main():
     print(f"[log] \tTipo da mensagem: {tipo}")
     if (tipo != 2):
         logexit("Mensagem de Connection inválida")
-    
     porta = common.connection_decode(data)
     print(f"[log] Recebido a porta UDP {porta}")
+    
     # Cria socket UDP
     if validIPv4(args.ip):
         udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -82,6 +82,26 @@ def main():
     
     # Conecta ao socket UDP do servidor
     udp_socket.bind((infoCliente[0],0)) 
+    
+    # Envia a mensagem Info_file ao servidor, com o nome e tamanho do arquivo
+    print("[log] Enviando info_file")
+    filename = "teste1.txt"
+    size = 2043
+    tcp_socket.sendall(common.info_file_encode(filename,size))
+    
+    # Recebe a mensagem de OK do servidor
+    print("[log] Aguardando ok do servidor")
+    data = tcp_socket.recv(1024)
+    # print(f"[log] Mensagem: {data}")
+    data = bytearray(data)
+    tipo = common.msgId(data)
+    print(f"[log] \tTipo da mensagem: {tipo}")
+    if (tipo != 4):
+        logexit("Mensagem de OK inválida")
+    print("[log] Ok recebido")
+    
+    # Janela deslizante pode começar
+        
     # udp_socket.sendto(b"teste",(args.ip, porta))
     # print(f"[udp] Enviando arquivo pelo socket UDP, com porta {porta}")
     
