@@ -1,4 +1,3 @@
-### TODO: função/classe para remontar e testar se a divisão tá certa
 from common import MAX_PAYLOAD_SIZE
 
 class FileDivider:
@@ -30,6 +29,11 @@ class FileDivider:
         return ba
     
     def divideFile(self):
+        """
+        Divide o arquivo com nome passado para o construtor em pacotes do tipo
+        File. A lista de pacotes gerados, em ordem, fica no atributo 'pkts' da
+        classe 
+        """
         with open(self.nome_arq,'rb') as file:
             pl = file.read(MAX_PAYLOAD_SIZE)
             seq = 0

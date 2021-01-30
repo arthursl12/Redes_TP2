@@ -1,4 +1,3 @@
-### TODO: função/classe para remontar e testar se a divisão tá certa
 from common import MAX_PAYLOAD_SIZE, msgId
 
 class FileAssembler:
@@ -29,6 +28,10 @@ class FileAssembler:
         return (seq, size, payload)
     
     def assembleFile(self):
+        """
+        Remonta o arquivo que está dividido em pacotes do tipo File, passados
+        para o construtor. O arquivo de saída tem nome passado para o construtor
+        """
         with open(self.nome_arq,'wb') as file:
             for i in range(len(self.pkts)):
                 msg = self.pkts[i]
@@ -36,15 +39,3 @@ class FileAssembler:
                 
                 assert seq == i
                 file.write(pl)
-        #     pl = file.read(MAX_PAYLOAD_SIZE)
-        #     seq = 0
-        #     while pl:
-        #         pl = bytearray(pl)
-        #         pkt = self.file_pkt_encode(seq, pl)
-        #         self.pkts.append(pkt)
-        #         self.sent.append(False)
-        #         self.ack.append(False)
-                
-        #         seq += 1
-        #         pl = file.read(MAX_PAYLOAD_SIZE)
-
