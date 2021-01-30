@@ -9,7 +9,7 @@ class TestId:
         assert common.msgId(common.info_file_encode("teste1.txt",135)) == 3
         assert common.msgId(common.ok_encode()) == 4
         assert common.msgId(common.fim_encode()) == 5
-        assert common.msgId(common.ack_encode()) == 7
+        assert common.msgId(common.ack_encode(0)) == 7
 
 class TestHello:
     def test_hello_msg(self):
@@ -61,14 +61,18 @@ class TestAck:
         ba = bytearray()
         i = 7
         ba.extend(i.to_bytes(length=2, byteorder='big'))
-        assert ba == common.ack_encode()
+        i = 10
+        ba.extend(i.to_bytes(length=4, byteorder='big'))
+        assert ba == common.ack_encode(10)
     
     def test_ack_decode(self):
-        common.ack_decode(common.ack_encode())
+        assert common.ack_decode(common.ack_encode(10)) == 10
         with pytest.raises(Exception) as e_info:
             ba = bytearray()
             i = 80
             ba.extend(i.to_bytes(length=2, byteorder='big'))
+            i = 10
+            ba.extend(i.to_bytes(length=4, byteorder='big'))
             common.ack_decode(ba)
 class TestConnection:
     def test_connection_msg(self):

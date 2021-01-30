@@ -150,24 +150,27 @@ def fim_decode(msg):
     assert msgId(msg) == 5
     assert len(msg) == 2
 
-def file_encode():
-    pass
-def file_decode():
-    pass
-
-def ack_encode():
+def ack_encode(seq):
     """
-    Cria uma mensagem do tipo ACK: apenas 2 bytes, representando o 7
+    Cria uma mensagem do tipo ACK: 
+        2 bytes, representando o 7
+        4 bytes, representado o número de sequência
     """
     ba = bytearray()
     i = 7
     ba.extend(i.to_bytes(length=2, byteorder='big'))
+    ba.extend(seq.to_bytes(length=4, byteorder='big'))
     return ba
 
 def ack_decode(msg):
     """
     Decodifica uma mensagem em binário do tipo ACK.
     Verifica seu tamanho e id, levanta uma exceção se houver algo errado
+    Retorna o número de sequência da mensagem
     """
     assert msgId(msg) == 7
-    assert len(msg) == 2
+    if (len(msg) != 6):
+        print(f"Tamanho errado: {len(msg)} => {msg}")
+    assert len(msg) == 6
+    return int.from_bytes(msg[2:6], "big")
+    

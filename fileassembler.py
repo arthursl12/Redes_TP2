@@ -1,7 +1,7 @@
 from common import MAX_PAYLOAD_SIZE, msgId
 
 class FileAssembler:
-    def __init__(self, nome_arq, pkts):
+    def __init__(self, nome_arq, pkts=[]):
         self.nome_arq = nome_arq
         self.pkts = pkts
     

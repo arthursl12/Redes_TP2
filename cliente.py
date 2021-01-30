@@ -7,7 +7,7 @@ import time
 from _thread import *
 
 from common import (WINDOW_SIZE, ack_decode, connection_decode, hello_encode,
-                    info_file_encode, msgId)
+                    info_file_encode, msgId, fim_encode)
 from filedivider import FileDivider
 
 TIMEOUT_MAX = 0.5
@@ -47,7 +47,7 @@ f = FileDivider()
 def ack_thread(server):
     print("[log] Entrando na thread para receber ACK's")
     while(1):
-        data = server.recv(1024)
+        data = server.recv(6)
         data = bytearray(data)
         tipo = msgId(data)
         if (tipo != 7):
@@ -57,9 +57,6 @@ def ack_thread(server):
         f.setAck(seq, True)
         print(f"[udp] Status do pacote {seq} é recebido")
         
-        
-
-
 def main():
     # Parse dos argumentos
     parser = argparse.ArgumentParser()
@@ -195,7 +192,7 @@ def main():
                 break
             agora = time.time()
 
-        if f.isAck[idx_enviar]:
+        if f.isAck(idx_enviar):
             # Servidor já confirmou o primeiro, podemos "avançar a janela"
             # e resetar o timer
             idx_enviar += 1
@@ -207,6 +204,10 @@ def main():
                 f.setSent(j, False)      # Reseta status de enviado
             time_start = time.time()
             continue
+    udp_socket.close()
+    print("[log] Enviando confirmação de fim")
+    tcp_socket.sendall(fim_encode())
+    tcp_socket.close()
     
     
         
