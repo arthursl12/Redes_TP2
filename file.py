@@ -2,7 +2,7 @@
 from common import MAX_PAYLOAD_SIZE
 
 class FileManager:
-    def __init__(self, nome_arq, pkt_max_size):
+    def __init__(self, nome_arq):
         self.nome_arq = nome_arq
         self.pkt_max_size = MAX_PAYLOAD_SIZE
         self.pkts = []
@@ -42,3 +42,15 @@ class FileManager:
 
     def __getitem__(self, key):
         return self.pkts[key]
+    
+    # Getters/Setters de Flags
+    def isAck(self, idx):
+        return self.ack[idx]
+    def setAck(self, idx, status):
+        assert type(status) == bool
+        self.ack[idx] = status
+    def isSent(self, idx):
+        return self.sent[idx]
+    def setSent(self, idx, status):
+        assert type(status) == bool
+        self.sent[idx] = status

@@ -15,7 +15,7 @@ isSentFlag: dizer SE mandou
 
 class TestFileDivider:
     def setup_method(self):
-        self.f = FileManager("ttAuto.txt", 1000)
+        self.f = FileManager("ttAuto.txt")
         self.f.divideFile()
     
     def test_packet_size(self):
@@ -36,8 +36,11 @@ class TestFileDivider:
             i = len(pkt) - 8
             ba.extend(i.to_bytes(length=2, byteorder='big'))
             assert ba == pkt[:8]
-    
-    def test_packet_maker_full(self):
+            
+    def test_packet_maker(self):
+        self.f = FileManager("ttAuto.txt")
+        self.f.divideFile()
+        
         # Syntethic payload
         pl = bytearray()
         for k in range(1000):
@@ -78,9 +81,12 @@ class TestFileAssembler:
         filename = assemblePackets(lst)
         assert filecmp(filename, "ttAuto.txt", shallow=False) == True
 
+"""
+
 class TestFileFlags:
     def setup_method(self):
-        self.f = FileManager("ttAuto.txt", 1000)
+        self.f = FileManager("ttLong.txt")
+        self.f.divideFile()
     
     def test_is_ack(self):
         for i in range(self.f.getQtdPacotes()):
@@ -89,41 +95,43 @@ class TestFileFlags:
     def test_ack(self):
         for i in range(self.f.getQtdPacotes()):
             if (i % 2 == 0):
-                self.f.Ack(i)
+                self.f.setAck(i, True)
             
         for i in range(self.f.getQtdPacotes()):
             if (i % 2 == 0):
                 assert self.f.isAck(i) == True
             else:
                 assert self.f.isAck(i) == False
-                
-    def test_is_sent_flag(self):
-        for i in range(self.f.getQtdPacotes()):
-            assert self.f.isSentFlag(i) == False
-    
-    def test_send_flag(self):
-        for i in range(self.f.getQtdPacotes()):
-            if (i % 2 == 0):
-                self.f.sendFlag(i)
             
         for i in range(self.f.getQtdPacotes()):
             if (i % 2 == 0):
-                assert self.f.isSentFlag(i) == True
-            else:
-                assert self.f.isSentFlag(i) == False
-    
-    def test_not_set_flag(self):
-        for i in range(self.f.getQtdPacotes()):
-            if (i % 2 == 0):
-                self.f.sendFlag(i)
-        
-        for i in range(self.f.getQtdPacotes()):
-            if (i % 2 == 0):
-                self.f.notSentFlag(i)
-        
-        for i in range(self.f.getQtdPacotes()):
-            assert self.f.isSentFlag(i) == False
+                self.f.setAck(i, False)
 
+        for i in range(self.f.getQtdPacotes()):
+            assert self.f.isAck(i) == False
+    def test_is_sent(self):
+        for i in range(self.f.getQtdPacotes()):
+            assert self.f.isSent(i) == False
+    
+    def test_sent(self):
+        for i in range(self.f.getQtdPacotes()):
+            if (i % 2 == 0):
+                self.f.setSent(i, True)
+            
+        for i in range(self.f.getQtdPacotes()):
+            if (i % 2 == 0):
+                assert self.f.isSent(i) == True
+            else:
+                assert self.f.isSent(i) == False
+            
+        for i in range(self.f.getQtdPacotes()):
+            if (i % 2 == 0):
+                self.f.setSent(i, False)
+
+        for i in range(self.f.getQtdPacotes()):
+            assert self.f.isSent(i) == False
+
+"""
 class TestThrowsGetters:
     def setup_method(self):
         self.f = FileManager("ttAuto.txt", 1000)
@@ -133,7 +141,7 @@ class TestThrowsGetters:
             pkt = self.f[i]
         
         for i in range(self.f.getQtdPacotes()):
-            self.f.Ack(i)
+            self.f.setAck(i, False)
             
         for i in range(self.f.getQtdPacotes()):
             self.f.isAck(i)
@@ -154,11 +162,11 @@ class TestThrowsGetters:
         with pytest.raises(Exception) as e_info:
             self.f[100000000000000000]
         
-        # Ack
+        # setAck
         with pytest.raises(Exception) as e_info:
-            self.f.Ack(-1)
+            self.f.setAck(-1, True)
         with pytest.raises(Exception) as e_info:
-            self.f.Ack(100000000000000000)
+            self.f.setAck(100000000000000000, True)
         
         # isAck
         with pytest.raises(Exception) as e_info:
