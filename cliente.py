@@ -167,58 +167,52 @@ def main():
         # elif timeout:
         #     sent_flag[whole window] = 0
 
-    # Tratamento dos pacotes restantes (para os quais a janela é muito grande)
-    idx_enviar = n_pkts - WINDOW_SIZE + 1 
-    if n_pkts < WINDOW_SIZE: 
-        idx_enviar = 0      # Se a janela for muito grande, comece a enviar do 0         
-    time_start = time.time()
-    while idx_enviar < n_pkts:
-        # Enquanto não enviar todos 
-        print(f"[log] Enviando pacotes de {idx_enviar} até {n_pkts-1}")
-        
-        # Envie todos pelo socket UDP
-        for j in range(idx_enviar, n_pkts):
-            # Manda os pacotes dentro da janela para o servidor, via UDP
-            udp_socket.sendto(f[j], (args.ip, porta))
-            f.setSent(j, True)      # Marca cada um como enviado
-
-        print(f"[log] Aguardando resposta ou timeout")
+    enviouTudo = True
+    for k in range(f.getQtdPacotes()):
+        enviouTudo = enviouTudo and f.isAck(k)
+    
+    if (not enviouTudo):
+        # Tratamento dos pacotes restantes (para os quais a janela é muito grande)
+        idx_enviar = n_pkts - WINDOW_SIZE + 1 
+        if n_pkts < WINDOW_SIZE: 
+            idx_enviar = 0      # Se a janela for muito grande, comece a enviar do 0         
         time_start = time.time()
-        agora = time.time()
-        while(agora - time_start < TIMEOUT_MAX):
-            # Enquanto não deu timeout
-            time.sleep(1)
-            if f.isAck(win_base):
-                break
-            agora = time.time()
+        while idx_enviar < n_pkts:
+            # Enquanto não enviar todos 
+            print(f"[log] Enviando pacotes de {idx_enviar} até {n_pkts-1}")
+            
+            # Envie todos pelo socket UDP
+            for j in range(idx_enviar, n_pkts):
+                # Manda os pacotes dentro da janela para o servidor, via UDP
+                udp_socket.sendto(f[j], (args.ip, porta))
+                f.setSent(j, True)      # Marca cada um como enviado
 
-        if f.isAck(idx_enviar):
-            # Servidor já confirmou o primeiro, podemos "avançar a janela"
-            # e resetar o timer
-            idx_enviar += 1
+            print(f"[log] Aguardando resposta ou timeout")
             time_start = time.time()
-        elif (agora - time_start > TIMEOUT_MAX):
-            # Timeout: servidor não confirmou os pacotes a tempo
-            print("[log] TIMEOUT: resetando timer e enviando novamente")
-            for j in range(idx_enviar, n_pkts+1):
-                f.setSent(j, False)      # Reseta status de enviado
-            time_start = time.time()
-            continue
+            agora = time.time()
+            while(agora - time_start < TIMEOUT_MAX):
+                # Enquanto não deu timeout
+                time.sleep(1)
+                if f.isAck(win_base):
+                    break
+                agora = time.time()
+
+            if f.isAck(idx_enviar):
+                # Servidor já confirmou o primeiro, podemos "avançar a janela"
+                # e resetar o timer
+                idx_enviar += 1
+                time_start = time.time()
+            elif (agora - time_start > TIMEOUT_MAX):
+                # Timeout: servidor não confirmou os pacotes a tempo
+                print("[log] TIMEOUT: resetando timer e enviando novamente")
+                for j in range(idx_enviar, n_pkts+1):
+                    f.setSent(j, False)      # Reseta status de enviado
+                time_start = time.time()
+                continue
     udp_socket.close()
     print("[log] Enviando confirmação de fim")
     tcp_socket.sendall(fim_encode())
     tcp_socket.close()
-    
-    
-        
-    # udp_socket.sendto(b"teste",(args.ip, porta))
-    # print(f"[udp] Enviando arquivo pelo socket UDP, com porta {porta}")
-    
-    # s.sendall(b"Hello, world")
-    # data = tcp_socket.recv(1024)
-    # tcp_socket.close()
-    # print('Received', repr(data))
-    print(f"Fora: {f.isAck(1)}")
 
 if __name__ == "__main__":
     main()

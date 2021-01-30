@@ -32,7 +32,7 @@ def multi_threaded_client(client, server):
             (seq, _, _) = f.file_pkt_decode(data)
             print(f"[udp] Recebi o pacote {seq}, deveria ser {proximo_idx}")
             if (seq == proximo_idx):
-                print(f"[udp] Acknoledge do pacote {seq}")
+                print(f"[udp] Acknowledge do pacote {seq}")
                 
                 # Guarda o pacote e envia o ACK
                 pkts.append(data)   
