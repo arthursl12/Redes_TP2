@@ -22,7 +22,7 @@ class TestFileDivider:
         for i in range(self.f.getQtdPacotes()-1):
             assert len(self.f[0] == 1008)
         i = self.f.getQtdPacotes()-1
-        assert len(self.f[i] <= 1008)
+        assert len(self.f[i]) <= 1008
     
     def test_packet_header(self):
         for k in range(self.f.getQtdPacotes()):
@@ -34,11 +34,38 @@ class TestFileDivider:
             
             pkt = self.f[i]
             i = len(pkt) - 8
-            ba.extend(i.to_bytes(length=4, byteorder='big'))
+            ba.extend(i.to_bytes(length=2, byteorder='big'))
             assert ba == pkt[:8]
     
+    def test_packet_maker_full(self):
+        # Syntethic payload
+        pl = bytearray()
+        for k in range(1000):
+            if (k < 300):
+                i = 1
+                pl.extend(i.to_bytes(length=1, byteorder='big'))
+            else:
+                i = 0
+                pl.extend(i.to_bytes(length=1, byteorder='big'))
+        assert len(pl) == 1000
+        pkt = self.f.file_pkt_encode(4,pl)
+        
+        # Pkt manual
+        ba = bytearray()
+        i = 6
+        ba.extend(i.to_bytes(length=2, byteorder='big'))
+        i = 4
+        ba.extend(i.to_bytes(length=4, byteorder='big'))
+        pl_size = len(pl)
+        ba.extend(pl_size.to_bytes(length=2, byteorder='big'))
+        ba += pl
+        assert len(ba) == 1008
+        assert len(ba) == len(pkt)
+        assert ba == pkt
+        
+    
     ### TODO: função/classe para remontar e testar se a divisão tá certa
-
+"""
 class TestFileAssembler:
     def setup_method(self):
         self.f = FileManager("ttAuto.txt", 1000)
@@ -150,4 +177,4 @@ class TestThrowsGetters:
             self.f.isSentFlag(-1)
         with pytest.raises(Exception) as e_info:
             self.f.isSentFlag(100000000000000000)
-            
+"""

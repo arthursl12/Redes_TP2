@@ -11,6 +11,7 @@ ACK         7
 '''
 MAX_FILENAME_SIZE = 15
 WINDOW_SIZE = 5
+MAX_PAYLOAD_SIZE = 1000
 
 def msgId(b_msg):
     """
