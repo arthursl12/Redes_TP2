@@ -1,15 +1,21 @@
 ### TODO: função/classe para remontar e testar se a divisão tá certa
 from common import MAX_PAYLOAD_SIZE
 
-class FileManager:
+class FileDivider:
     def __init__(self, nome_arq):
         self.nome_arq = nome_arq
-        self.pkt_max_size = MAX_PAYLOAD_SIZE
         self.pkts = []
         self.sent = []
         self.ack = []
     
     def file_pkt_encode(self, seq, payload):
+        """
+        Cria uma mensagem do tipo File: 
+            2 bytes : representando o 6
+            4 bytes: ordem do pacote na sequência (inteiro): (parâmetro passado)
+            2 bytes : tamanho do payload a seguir, em bytes (número inteiro)
+            Até 1000bytes: payload (parâmetro passado) 
+        """
         ba = bytearray()
         i = 6
         ba.extend(i.to_bytes(length=2, byteorder='big'))    # Código pkt
@@ -64,3 +70,4 @@ class FileManager:
             raise IndexError
         assert type(status) == bool
         self.sent[idx] = status
+

@@ -1,21 +1,21 @@
 import pytest
-from file import FileManager
+from filedivider import FileDivider
 import filecmp
 
 """
-Construtor: nome do arquivo, tamanho máximo do payload
-            cria uma lista de pacotes
+Construtor: nome do arquivo,
+dividefile: cria uma lista de pacotes
 getQtdPacotes
 Operador[]: acessa os pedaços (pacotes prontos)
-Ack: dizer que recebeu o ack
+setAck: setar o ack
 isAck: dizer SE recebeu o ack
-SendFlag: dizer que mandou 
-isSentFlag: dizer SE mandou
+setSent: dizer que mandou (ou não)
+isSent: dizer SE mandou
 """
 
 class TestFileDivider:
     def setup_method(self):
-        self.f = FileManager("ttAuto.txt")
+        self.f = FileDivider("ttAuto.txt")
         self.f.divideFile()
     
     def test_packet_size(self):
@@ -38,7 +38,7 @@ class TestFileDivider:
             assert ba == pkt[:8]
             
     def test_packet_maker(self):
-        self.f = FileManager("ttAuto.txt")
+        self.f = FileDivider("ttAuto.txt")
         self.f.divideFile()
         
         # Syntethic payload
@@ -65,27 +65,10 @@ class TestFileDivider:
         assert len(ba) == 1008
         assert len(ba) == len(pkt)
         assert ba == pkt
-        
-    
-    ### TODO: função/classe para remontar e testar se a divisão tá certa
-"""
-class TestFileAssembler:
-    def setup_method(self):
-        self.f = FileManager("ttAuto.txt", 1000)
-        self.f.divideFile()
-    
-    def test_assembler(self):
-        lst = []
-        for i in range(self.f.getQtdPacotes()):
-            lst.append(self.f[i])
-        filename = assemblePackets(lst)
-        assert filecmp(filename, "ttAuto.txt", shallow=False) == True
-
-"""
 
 class TestFileFlags:
     def setup_method(self):
-        self.f = FileManager("ttLong.txt")
+        self.f = FileDivider("ttLong.txt")
         self.f.divideFile()
     
     def test_is_ack(self):
@@ -134,7 +117,7 @@ class TestFileFlags:
 
 class TestThrowsGetters:
     def setup_method(self):
-        self.f = FileManager("ttAuto.txt")
+        self.f = FileDivider("ttAuto.txt")
         self.f.divideFile()
     
     def test_nothrow_get_item(self):
