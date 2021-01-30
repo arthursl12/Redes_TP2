@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
 
-import socket
 import argparse
+import socket
 import sys
-import common
+import time
+from _thread import *
+
+from common import (WINDOW_SIZE, ack_decode, connection_decode, hello_encode,
+                    info_file_encode, msgId)
+from filedivider import FileDivider
+
+TIMEOUT_MAX = 0.5
 
 def logexit(err):
     print(err)
@@ -35,6 +42,22 @@ Fim         5
 FILE        6
 ACK         7
 """
+f = FileDivider()
+
+def ack_thread(server):
+    print("[log] Entrando na thread para receber ACK's")
+    while(1):
+        data = server.recv(1024)
+        data = bytearray(data)
+        tipo = msgId(data)
+        if (tipo != 7):
+            logexit("Ack inválido!")
+        seq = ack_decode(data)
+        print(f"[udp] Ack de {seq} recebido")
+        f.setAck(seq, True)
+        print(f"[udp] Status do pacote {seq} é recebido")
+        
+        
 
 
 def main():
@@ -59,17 +82,16 @@ def main():
     
     # Envia a mensagem Hello
     print("[log] Enviando hello")
-    tcp_socket.sendall(common.hello_encode())
+    tcp_socket.sendall(hello_encode())
     
     # Recebe a mensagem Connection do servidor, com o número da porta
     data = tcp_socket.recv(1024)
-    # print(f"[log] Mensagem: {data}")
     data = bytearray(data)
-    tipo = common.msgId(data)
+    tipo = msgId(data)
     print(f"[log] \tTipo da mensagem: {tipo}")
     if (tipo != 2):
         logexit("Mensagem de Connection inválida")
-    porta = common.connection_decode(data)
+    porta = connection_decode(data)
     print(f"[log] Recebido a porta UDP {porta}")
     
     # Cria socket UDP
@@ -87,28 +109,115 @@ def main():
     print("[log] Enviando info_file")
     filename = "teste1.txt"
     size = 2043
-    tcp_socket.sendall(common.info_file_encode(filename,size))
+    tcp_socket.sendall(info_file_encode(filename,size))
     
     # Recebe a mensagem de OK do servidor
     print("[log] Aguardando ok do servidor")
     data = tcp_socket.recv(1024)
-    # print(f"[log] Mensagem: {data}")
     data = bytearray(data)
-    tipo = common.msgId(data)
+    tipo = msgId(data)
     print(f"[log] \tTipo da mensagem: {tipo}")
     if (tipo != 4):
         logexit("Mensagem de OK inválida")
     print("[log] Ok recebido")
     
+    # Divide o arquivo em pacotes
+    print(f"[log] Criando os pacotes do arquivo {args.arquivo}")
+    f.nome_arq = args.arquivo
+    f.divideFile()
+    print(f"[log] Foram criados {f.getQtdPacotes()} pacotes")
+    
+    # Cria a thread para receber os Acks do servidor
+    start_new_thread(ack_thread, (tcp_socket, ))
+
     # Janela deslizante pode começar
+    win_base = 0
+    n_pkts = f.getQtdPacotes()
+    
+    while ((win_base+WINDOW_SIZE-1) < n_pkts):
+        # Enquanto houver pacotes a enviar
+        print(f"[log] Enviando pacotes de {win_base} até {win_base+WINDOW_SIZE-1}")
+        # Manda os pacotes dentro da janela para o servidor, via UDP
+        for j in range(win_base, win_base+WINDOW_SIZE):
+            udp_socket.sendto(f[j], (args.ip, porta))
+            f.setSent(j, True)      # Marca cada um como enviado
+        
+        print(f"[log] Aguardando resposta ou timeout")
+        time_start = time.time()
+        agora = time.time()
+        while(agora - time_start < TIMEOUT_MAX):
+            # Enquanto não deu timeout
+            time.sleep(1)
+            if f.isAck(win_base):
+                break
+            agora = time.time()
+        
+        if f.isAck(win_base):
+            # Servidor já confirmou o primeiro, podemos avançar a janela
+            # e resetar o timer
+            win_base += 1
+            time_start = time.time()
+        elif (agora - time_start > TIMEOUT_MAX):
+            # Timeout: servidor não confirmou os pacotes a tempo
+            print("[log] TIMEOUT: resetando timer e enviando novamente")
+            for j in range(win_base, win_base+WINDOW_SIZE):
+                f.setSent(j, False)      # Reseta status de enviado
+            time_start = time.time()
+            continue
+
+        # if not timeout and ACK received of seq num = win_base:
+        #     win_base = win_base + 1
+        # elif timeout:
+        #     sent_flag[whole window] = 0
+
+    # Tratamento dos pacotes restantes (para os quais a janela é muito grande)
+    idx_enviar = n_pkts - WINDOW_SIZE + 1 
+    if n_pkts < WINDOW_SIZE: 
+        idx_enviar = 0      # Se a janela for muito grande, comece a enviar do 0         
+    time_start = time.time()
+    while idx_enviar < n_pkts:
+        # Enquanto não enviar todos 
+        print(f"[log] Enviando pacotes de {idx_enviar} até {n_pkts-1}")
+        
+        # Envie todos pelo socket UDP
+        for j in range(idx_enviar, n_pkts):
+            # Manda os pacotes dentro da janela para o servidor, via UDP
+            udp_socket.sendto(f[j], (args.ip, porta))
+            f.setSent(j, True)      # Marca cada um como enviado
+
+        print(f"[log] Aguardando resposta ou timeout")
+        time_start = time.time()
+        agora = time.time()
+        while(agora - time_start < TIMEOUT_MAX):
+            # Enquanto não deu timeout
+            time.sleep(1)
+            if f.isAck(win_base):
+                break
+            agora = time.time()
+
+        if f.isAck[idx_enviar]:
+            # Servidor já confirmou o primeiro, podemos "avançar a janela"
+            # e resetar o timer
+            idx_enviar += 1
+            time_start = time.time()
+        elif (agora - time_start > TIMEOUT_MAX):
+            # Timeout: servidor não confirmou os pacotes a tempo
+            print("[log] TIMEOUT: resetando timer e enviando novamente")
+            for j in range(idx_enviar, n_pkts+1):
+                f.setSent(j, False)      # Reseta status de enviado
+            time_start = time.time()
+            continue
+    
+    
         
     # udp_socket.sendto(b"teste",(args.ip, porta))
     # print(f"[udp] Enviando arquivo pelo socket UDP, com porta {porta}")
     
     # s.sendall(b"Hello, world")
-    data = tcp_socket.recv(1024)
-    tcp_socket.close()
-    print('Received', repr(data))
+    # data = tcp_socket.recv(1024)
+    # tcp_socket.close()
+    # print('Received', repr(data))
+    print(f"Fora: {f.isAck(1)}")
 
 if __name__ == "__main__":
     main()

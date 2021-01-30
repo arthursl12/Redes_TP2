@@ -1,7 +1,7 @@
 from common import MAX_PAYLOAD_SIZE
 
 class FileDivider:
-    def __init__(self, nome_arq):
+    def __init__(self, nome_arq="null.txt"):
         self.nome_arq = nome_arq
         self.pkts = []
         self.sent = []
