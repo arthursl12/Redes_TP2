@@ -24,12 +24,8 @@ def multi_threaded_client(client, server):
         proximo_idx = 0
         while(not exit_loop):
             data,_ = udtS.recvfrom(common.MAX_PAYLOAD_SIZE+20)
-            # data1 = client.recv(1024)
-            # data1 = bytearray(data1)
-            # if (common.msgId(data1) == 5):
-            #     print(f"[udp] Todos os pacotes recebidos de {infoClient[0]}: {infoClient[1]}")     
             if not data:
-                print("[log] Fim UDP")
+                print("[log] Conexão UDP encerrada precocemente")
                 break
             data = bytearray(data)
             assert common.msgId(data) == 6
@@ -76,32 +72,31 @@ def multi_threaded_client(client, server):
                 nome, tam = common.info_file_decode(data)
                 print(f"[udp] Informações do arquivo: {nome}: {tam}")
 
+                # Alocar estruturas para janela deslizante
                 f = FileAssembler("rec_"+nome)
                 pkts = []
-                ### TODO: Alocar estruturas para janela deslizante
-                
-                print(f"[udp] Enviando OK")
+
                 # Envia o OK para o cliente
+                print(f"[udp] Enviando OK")
                 client.sendall(common.ok_encode())
                 
+                # Cria uma thread para receber os pacotes
                 print(f"[udp] Aguardando pacotes")
                 start_new_thread(receive_file_thread, (client, udtS))
-                
-                
-                    
-                
-                # print(f"[udp] Aguardando udp: {infoUdt[0]}: {infoUdt[1]}")
-                # data, addr = udtS.recvfrom(1024)
-                # print(f"[udp] Recebido: {data}")
             elif (common.msgId(data) == 5):
                 # Recebeu mensagem de fim
-                print("[log] Arquivo enviado por completo")
+                print("[log] Arquivo recebido por completo")
+                f.pkts = pkts
                 exit_loop = True   
                 print(f"[log] Encerrando conexão UDP com o cliente "+
                       f"{infoClient[0]}: {infoClient[1]}")
                 udtS.close()
                 print(f"[log] Encerrando soquete TCP com o cliente "+
                       f"{infoClient[0]}: {infoClient[1]}")
+                print(f"[log] Escrevendo arquivo {f.nome_arq} em disco")
+                f.assembleFile()
+                print(f"[log] Arquivo {f.nome_arq} disponível  em disco")
+                
                 break
             # response = 'Server message: ' + data.decode('utf-8')
             # client.sendall(str.encode(response))
