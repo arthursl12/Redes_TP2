@@ -41,16 +41,26 @@ class FileManager:
         return len(self.pkts)
 
     def __getitem__(self, key):
+        if (key < 0):
+            raise IndexError
         return self.pkts[key]
     
     # Getters/Setters de Flags
     def isAck(self, idx):
+        if (idx < 0):
+            raise IndexError
         return self.ack[idx]
     def setAck(self, idx, status):
+        if (idx < 0):
+            raise IndexError
         assert type(status) == bool
         self.ack[idx] = status
     def isSent(self, idx):
+        if (idx < 0):
+            raise IndexError
         return self.sent[idx]
     def setSent(self, idx, status):
+        if (idx < 0):
+            raise IndexError
         assert type(status) == bool
         self.sent[idx] = status

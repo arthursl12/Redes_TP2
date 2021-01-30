@@ -131,10 +131,11 @@ class TestFileFlags:
         for i in range(self.f.getQtdPacotes()):
             assert self.f.isSent(i) == False
 
-"""
+
 class TestThrowsGetters:
     def setup_method(self):
-        self.f = FileManager("ttAuto.txt", 1000)
+        self.f = FileManager("ttAuto.txt")
+        self.f.divideFile()
     
     def test_nothrow_get_item(self):
         for i in range(self.f.getQtdPacotes()):
@@ -147,13 +148,10 @@ class TestThrowsGetters:
             self.f.isAck(i)
                 
         for i in range(self.f.getQtdPacotes()):
-            self.f.sendFlag(i)
+            self.f.isSent(i)
             
         for i in range(self.f.getQtdPacotes()):
-            self.f.isAck(i)
-            
-        for i in range(self.f.getQtdPacotes()):
-            self.f.isSentFlag(i)
+            self.f.setSent(i,False)
     
     def test_throws_gets(self):    
         # Operador []
@@ -176,13 +174,12 @@ class TestThrowsGetters:
         
         # SendFlag
         with pytest.raises(Exception) as e_info:
-            self.f.sendFlag(-1)
+            self.f.isSent(-1)
         with pytest.raises(Exception) as e_info:
-            self.f.sendFlag(100000000000000000)
+            self.f.isSent(100000000000000000)
         
         # isSentFlag
         with pytest.raises(Exception) as e_info:
-            self.f.isSentFlag(-1)
+            self.f.setSent(-1, False)
         with pytest.raises(Exception) as e_info:
-            self.f.isSentFlag(100000000000000000)
-"""
+            self.f.setSent(100000000000000000, True)
