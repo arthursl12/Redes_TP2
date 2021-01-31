@@ -104,7 +104,7 @@ def main():
     
     # Envia a mensagem Info_file ao servidor, com o nome e tamanho do arquivo
     print("[log] Enviando info_file")
-    filename = "teste1.txt"
+    filename = args.arquivo
     size = 2043
     tcp_socket.sendall(info_file_encode(filename,size))
     
@@ -205,7 +205,7 @@ def main():
             elif (agora - time_start > TIMEOUT_MAX):
                 # Timeout: servidor não confirmou os pacotes a tempo
                 print("[log] TIMEOUT: resetando timer e enviando novamente")
-                for j in range(idx_enviar, n_pkts+1):
+                for j in range(idx_enviar, n_pkts):
                     f.setSent(j, False)      # Reseta status de enviado
                 time_start = time.time()
                 continue
