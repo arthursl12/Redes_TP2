@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 
-import common 
+import argparse
 import queue
 import select
 import socket
 import sys
 from _thread import *
-import argparse
+
+from common import (MAX_PAYLOAD_SIZE, WINDOW_SIZE, ack_encode,
+                    connection_encode, info_file_decode, msgId, ok_encode)
 from fileassembler import FileAssembler
+
 
 def logexit(err):
     print(err)
@@ -23,22 +26,26 @@ def multi_threaded_client(client, server):
     def receive_file_thread(client, udtS):
         proximo_idx = 0
         while(not exit_loop):
-            data,_ = udtS.recvfrom(common.MAX_PAYLOAD_SIZE+20)
+            
+            data,_ = udtS.recvfrom(MAX_PAYLOAD_SIZE+20)
             if not data:
                 print("[log] Conexão UDP encerrada precocemente")
                 break
             data = bytearray(data)
-            assert common.msgId(data) == 6
+            assert msgId(data) == 6
             (seq, _, _) = f.file_pkt_decode(data)
-            print(f"[udp] Recebi o pacote {seq}, deveria ser {proximo_idx}")
-            if (seq == proximo_idx):
+            print(f"[udp] Recebi o pacote {seq}, deveria ser entre {proximo_idx} e {proximo_idx + WINDOW_SIZE}")
+            if (seq >= proximo_idx and seq <= proximo_idx+WINDOW_SIZE):
                 print(f"[udp] Acknowledge do pacote {seq}")
                 
-                # Guarda o pacote e envia o ACK
-                pkts.append(data)   
-                client.sendall(common.ack_encode(seq))
-                proximo_idx += 1
-                print(f"[udp] Próximo é o {proximo_idx}")
+                # Guarda o pacote na posição correspondente e envia o ACK
+                # pkts.append(data) 
+                pkts[seq] = data 
+                client.sendall(ack_encode(seq))
+                if (seq == proximo_idx):
+                    # Avança início da janela
+                    proximo_idx += 1
+                    print(f"[udp] Próximo está entre {proximo_idx} e {proximo_idx + WINDOW_SIZE}")
     
     while True:
         print("[log] Aguardando mensagem do cliente")
@@ -51,8 +58,8 @@ def multi_threaded_client(client, server):
             data = bytearray(data)
             print(f"[log] Mensagem recebida de {infoClient[0]}: {infoClient[1]}")
             # print(f"[log] Mensagem: {data}")
-            print(f"[log] \tTipo da mensagem: {common.msgId(data)}")
-            if (common.msgId(data) == 1):
+            print(f"[log] \tTipo da mensagem: {msgId(data)}")
+            if (msgId(data) == 1):
                 # Recebeu mensagem Hello
                 # Cria o socket UDP
                 udtS = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -65,25 +72,29 @@ def multi_threaded_client(client, server):
                 
                 # Manda a mensagem Connection com o número da porta para 
                 # o cliente
-                b_con = common.connection_encode(infoUdt[1])
+                b_con = connection_encode(infoUdt[1])
                 client.sendall(b_con)
-            elif (common.msgId(data) == 3):
+            elif (msgId(data) == 3):
                 # Recebeu mensagem Info_file
-                nome, tam = common.info_file_decode(data)
+                nome, tam = info_file_decode(data)
                 print(f"[udp] Informações do arquivo: {nome}: {tam}")
 
-                # Alocar estruturas para janela deslizante
+                # Alocar estruturas para janela deslizante do receptor
                 f = FileAssembler("rec_"+nome)
-                pkts = []
+                qtd_pkts = tam//MAX_PAYLOAD_SIZE
+                if (tam % MAX_PAYLOAD_SIZE != 0):
+                    qtd_pkts += 1
+                pkts = [None for _ in range(qtd_pkts)]
+                print(f"[udp] Alocado um vetor de {len(pkts)} posições")
 
                 # Envia o OK para o cliente
                 print(f"[udp] Enviando OK")
-                client.sendall(common.ok_encode())
+                client.sendall(ok_encode())
                 
                 # Cria uma thread para receber os pacotes
                 print(f"[udp] Aguardando pacotes")
                 start_new_thread(receive_file_thread, (client, udtS))
-            elif (common.msgId(data) == 5):
+            elif (msgId(data) == 5):
                 # Recebeu mensagem de fim
                 print("[log] Arquivo recebido por completo")
                 f.pkts = pkts

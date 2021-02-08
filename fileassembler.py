@@ -33,6 +33,7 @@ class FileAssembler:
         para o construtor. O arquivo de saída tem nome passado para o construtor
         """
         with open(self.nome_arq,'wb') as file:
+            print(f"[log] Remontando arquivo a partir de {len(self.pkts)} pacotes")
             for i in range(len(self.pkts)):
                 msg = self.pkts[i]
                 (seq, size, pl) = self.file_pkt_decode(msg)

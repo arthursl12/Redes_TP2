@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
 import argparse
+import os
 import socket
 import sys
 import time
 from _thread import *
 
-from common import (WINDOW_SIZE, ack_decode, connection_decode, hello_encode,
-                    info_file_encode, msgId, fim_encode)
+from common import (WINDOW_SIZE, ack_decode, connection_decode, fim_encode,
+                    hello_encode, info_file_encode, msgId)
 from filedivider import FileDivider
 
 TIMEOUT_MAX = 0.5
@@ -105,7 +106,7 @@ def main():
     # Envia a mensagem Info_file ao servidor, com o nome e tamanho do arquivo
     print("[log] Enviando info_file")
     filename = args.arquivo
-    size = 2043
+    size = os.path.getsize(args.arquivo)
     tcp_socket.sendall(info_file_encode(filename,size))
     
     # Recebe a mensagem de OK do servidor
