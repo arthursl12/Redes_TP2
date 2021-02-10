@@ -1,9 +1,11 @@
 from common import MAX_PAYLOAD_SIZE, msgId
+from pathlib import Path
 
 class FileAssembler:
     def __init__(self, nome_arq, pkts=[]):
         self.nome_arq = nome_arq
         self.pkts = pkts
+        self.outputFolder = "output"
     
     def file_pkt_decode(self, msg):
         """
@@ -31,8 +33,10 @@ class FileAssembler:
         """
         Remonta o arquivo que está dividido em pacotes do tipo File, passados
         para o construtor. O arquivo de saída tem nome passado para o construtor
+        O arquivo de saída estará dentro da pasta 'output'
         """
-        with open(self.nome_arq,'wb') as file:
+        Path(self.outputFolder).mkdir(exist_ok=True)
+        with open(self.outputFolder + "/" + self.nome_arq,'wb') as file:
             print(f"[log] Remontando arquivo a partir de {len(self.pkts)} pacotes")
             for i in range(len(self.pkts)):
                 msg = self.pkts[i]

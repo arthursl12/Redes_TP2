@@ -80,7 +80,7 @@ def multi_threaded_client(client, server):
                 print(f"[udp] Informações do arquivo: {nome}: {tam}")
 
                 # Alocar estruturas para janela deslizante do receptor
-                f = FileAssembler("rec_"+nome)
+                f = FileAssembler(nome)
                 qtd_pkts = tam//MAX_PAYLOAD_SIZE
                 if (tam % MAX_PAYLOAD_SIZE != 0):
                     qtd_pkts += 1
