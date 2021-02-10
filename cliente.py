@@ -107,7 +107,11 @@ def main():
     print("[log] Enviando info_file")
     filename = args.arquivo
     size = os.path.getsize(args.arquivo)
-    tcp_socket.sendall(info_file_encode(filename,size))
+    try:
+        tcp_socket.sendall(info_file_encode(filename,size))
+    except Exception:
+        logexit("Nome não permitido")
+        
     
     # Recebe a mensagem de OK do servidor
     print("[log] Aguardando ok do servidor")

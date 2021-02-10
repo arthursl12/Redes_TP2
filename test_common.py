@@ -2,6 +2,21 @@ import pytest
 import binascii
 import common
 
+class TestValidName:
+    def test_name(self):
+        assert not common.valid_name("arquivosemextensao")
+        assert not common.valid_name("arquivo.com.doispontos")
+        assert not common.valid_name("arquivo.com..maisde.doispontos")
+        assert not common.valid_name("extensaosemtres.docx")
+        assert not common.valid_name("extensaosemtres.")
+        assert not common.valid_name("extensaosemtres.p")
+        assert not common.valid_name("extensaosemtres.pp")
+        assert common.valid_name("extensao.val")
+        assert not common.valid_name("notASCIIç.val")
+            
+            
+            
+            
 class TestId:
     def test_msgId(self):
         assert common.msgId(common.hello_encode()) == 1

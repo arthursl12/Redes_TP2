@@ -9,6 +9,8 @@ Fim         5
 FILE        6
 ACK         7
 '''
+from argparse import ArgumentError
+
 MAX_FILENAME_SIZE = 15
 WINDOW_SIZE = 5
 MAX_PAYLOAD_SIZE = 1000
@@ -69,6 +71,29 @@ def connection_decode(msg):
     b_porta = msg[2:6]
     return int.from_bytes(b_porta, "big")  
 
+def valid_name(nome_arq):
+    """
+    Dado o nome de um arquivo (string), verifica se atende à especificação.
+    Se houver qualquer problema, levanta uma exceção
+    """
+    # Possui pelo menos um ponto
+    if (nome_arq.find(".") == -1):
+        return False
+    
+    # Possui exatamente um ponto
+    pontos = [i for i, letter in enumerate(nome_arq) if letter == '.']
+    if (len(pontos) != 1):
+        return False       
+    
+    # Extensão possui exatamente três caracteres
+    idx_ponto = pontos[0]
+    if (idx_ponto != len(nome_arq) - 3 - 1):
+        return False
+
+    # Arquivo possui só caracteres ASCII
+    return all(ord(c) < 128 for c in nome_arq)
+          
+
 def info_file_encode(nome_arq, size):
     """
     Cria uma mensagem do tipo Info File: 
@@ -78,6 +103,7 @@ def info_file_encode(nome_arq, size):
     Nome com mais de 15 bytes levanta uma exceção
     """
     assert size >= 0
+    assert valid_name(nome_arq)    # Verifica a validade do nome do arquivo
     
     # Id da mensagem
     ba = bytearray()
@@ -86,10 +112,14 @@ def info_file_encode(nome_arq, size):
     
     # Nome do arquivo (máximo 15 bytes)
     b_str = nome_arq.encode("ascii")
-    print (len(b_str))
+    print(len(b_str))
+    
+    # Se o nome tiver mais de 15, levantará uma exceção
+    if (MAX_FILENAME_SIZE - len(b_str) < 0):
+        raise ArgumentError
+    
     
     # Completa com zeros até 15 bytes
-    # Se o nome tiver mais de 15, levantará uma exceção
     filler = bytearray(MAX_FILENAME_SIZE - len(b_str))
     ba.extend(filler)
     ba.extend(b_str)
