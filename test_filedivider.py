@@ -16,7 +16,7 @@ isSent: dizer SE mandou
 class TestFileDivider:
     def setup_method(self):
         self.f = FileDivider("ttAuto.txt")
-        self.f.divideFile()
+        self.f.loadPackets()
     
     def test_packet_size(self):
         for i in range(self.f.getQtdPacotes()-1):
@@ -39,7 +39,7 @@ class TestFileDivider:
             
     def test_packet_maker(self):
         self.f = FileDivider("ttAuto.txt")
-        self.f.divideFile()
+        self.f.loadPackets()
         
         # Syntethic payload
         pl = bytearray()
@@ -69,7 +69,7 @@ class TestFileDivider:
 class TestFileFlags:
     def setup_method(self):
         self.f = FileDivider("ttLong.txt")
-        self.f.divideFile()
+        self.f.loadPackets()
     
     def test_is_ack(self):
         for i in range(self.f.getQtdPacotes()):
@@ -118,7 +118,7 @@ class TestFileFlags:
 class TestThrowsGetters:
     def setup_method(self):
         self.f = FileDivider("ttAuto.txt")
-        self.f.divideFile()
+        self.f.loadPackets()
     
     def test_nothrow_get_item(self):
         for i in range(self.f.getQtdPacotes()):

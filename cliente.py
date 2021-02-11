@@ -115,7 +115,7 @@ def main():
     # Divide o arquivo em pacotes
     print(f"[log] Criando os pacotes do arquivo {args.arquivo}")
     f.nome_arq = args.arquivo
-    f.divideFile()
+    f.loadPackets()
     print(f"[log] Foram criados {f.getQtdPacotes()} pacotes")
     
     global recebeu_Tudo

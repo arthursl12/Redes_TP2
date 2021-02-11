@@ -1,4 +1,4 @@
-from common import MAX_PAYLOAD_SIZE, msgId
+from common import MAX_PAYLOAD_SIZE, WINDOW_SIZE, msgId
 from pathlib import Path
 
 class FileAssembler:
@@ -29,18 +29,23 @@ class FileAssembler:
         
         return (seq, size, payload)
     
-    def assembleFile(self):
+    def assembleFile(self, idx=0):
         """
         Remonta o arquivo que está dividido em pacotes do tipo File, passados
         para o construtor. O arquivo de saída tem nome passado para o construtor
         O arquivo de saída estará dentro da pasta 'output'
         """
         Path(self.outputFolder).mkdir(exist_ok=True)
+        i = 0
         with open(self.outputFolder + "/" + self.nome_arq,'wb') as file:
-            print(f"[log] Remontando arquivo a partir de {len(self.pkts)} pacotes")
-            for i in range(len(self.pkts)):
+            while (i < idx):
+                file.seek(MAX_PAYLOAD_SIZE, 1)
+            print(f"[log] Remontando arquivo a partir do índice {idx}")
+            # i = idx
+            while (i < idx+WINDOW_SIZE and i < len(self.pkts)):
                 msg = self.pkts[i]
                 (seq, size, pl) = self.file_pkt_decode(msg)
-                
                 assert seq == i
                 file.write(pl)
+                i += 1
+                

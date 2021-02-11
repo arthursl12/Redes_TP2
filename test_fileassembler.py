@@ -18,7 +18,7 @@ isSentFlag: dizer SE mandou
 class TestFileAssembler:
     def setup_method(self):
         self.div = FileDivider("ttLong.txt")
-        self.div.divideFile()
+        self.div.loadPackets()
         
     def test_assembler(self):
         lst = []
@@ -32,7 +32,7 @@ class TestFileAssembler:
 class TestPacketDecoder:
     def setup_method(self):
         self.div = FileDivider("ttLong.txt")
-        self.div.divideFile()
+        self.div.loadPackets()
         self.f = FileAssembler("resLong.txt", pkts=self.div.pkts)
         self.f.assembleFile()
         
