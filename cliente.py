@@ -5,7 +5,7 @@ import os
 import socket
 import sys
 import time
-from _thread import *
+from threading import Thread
 
 from common import (WINDOW_SIZE, ack_decode, connection_decode, fim_encode,
                     hello_encode, info_file_encode, msgId)
@@ -44,19 +44,8 @@ FILE        6
 ACK         7
 """
 f = FileDivider()
+recebeu_Tudo = False
 
-def ack_thread(server):
-    print("[log] Entrando na thread para receber ACK's")
-    while(1):
-        data = server.recv(6)
-        data = bytearray(data)
-        tipo = msgId(data)
-        if (tipo != 7):
-            logexit("Ack inválido!")
-        seq = ack_decode(data)
-        print(f"[udp] Ack de {seq} recebido")
-        f.setAck(seq, True)
-        print(f"[udp] Status do pacote {seq} é recebido")
         
 def main():
     # Parse dos argumentos
@@ -129,9 +118,33 @@ def main():
     f.divideFile()
     print(f"[log] Foram criados {f.getQtdPacotes()} pacotes")
     
-    # Cria a thread para receber os Acks do servidor
-    start_new_thread(ack_thread, (tcp_socket, ))
+    global recebeu_Tudo
+    def ack_thread(server):
+        global recebeu_Tudo
+        print("[log] Entrando na thread para receber ACK's")
+        while(1):
+            data = server.recv(6)
+            data = bytearray(data)
+            tipo = msgId(data)
+            if (tipo == 7):
+                seq = ack_decode(data)
+                print(f"[udp] Ack de {seq} recebido")
+                f.setAck(seq, True)
+                print(f"[udp] Status do pacote {seq} é recebido")
+            elif (tipo == 5):
+                print(f"[log] Mensagem de fim recebida")
+                recebeu_Tudo = True
+                print(f"[log] Recebeu tudo (thread)? {recebeu_Tudo}")
+                break
+            else:
+                logexit("Mensagem inválida!")
+        print("[log] Fim da thread de recebimento")
 
+    
+    # Cria a thread para receber os Acks do servidor
+    ackT = Thread(target=ack_thread, args=(tcp_socket, ))
+    ackT.start()
+    
     # Janela deslizante pode começar
     win_base = 0
     n_pkts = f.getQtdPacotes()
@@ -167,16 +180,11 @@ def main():
             time_start = time.time()
             continue
 
-        # if not timeout and ACK received of seq num = win_base:
-        #     win_base = win_base + 1
-        # elif timeout:
-        #     sent_flag[whole window] = 0
-
-    enviouTudo = True
-    for k in range(f.getQtdPacotes()):
-        enviouTudo = enviouTudo and f.isAck(k)
+    # enviouTudo = True
+    # for k in range(f.getQtdPacotes()):
+    #     enviouTudo = enviouTudo and f.isAck(k)
     
-    if (not enviouTudo):
+    if (not recebeu_Tudo):
         # Tratamento dos pacotes restantes (para os quais a janela é muito grande)
         idx_enviar = n_pkts - WINDOW_SIZE + 1 
         if n_pkts < WINDOW_SIZE: 
@@ -214,10 +222,15 @@ def main():
                     f.setSent(j, False)      # Reseta status de enviado
                 time_start = time.time()
                 continue
+    ackT.join()
+    assert recebeu_Tudo
+    # print(f"[log] Recebeu tudo (fim)? {recebeu_Tudo}")
+    print(f"[log] Fim do loop de envio")
     udp_socket.close()
-    print("[log] Enviando confirmação de fim")
-    tcp_socket.sendall(fim_encode())
+    # print("[log] Enviando confirmação de fim")
+    # tcp_socket.sendall(fim_encode())
     tcp_socket.close()
+    
 
 if __name__ == "__main__":
     main()

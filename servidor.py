@@ -5,10 +5,12 @@ import queue
 import select
 import socket
 import sys
-from _thread import *
+from threading import Thread
+# from _thread import *
 
 from common import (MAX_PAYLOAD_SIZE, WINDOW_SIZE, ack_encode,
-                    connection_encode, info_file_decode, msgId, ok_encode)
+                    connection_encode, fim_encode, info_file_decode, msgId,
+                    ok_encode)
 from fileassembler import FileAssembler
 
 
@@ -25,7 +27,7 @@ def multi_threaded_client(client, server):
     exit_loop = False
     def receive_file_thread(client, udtS):
         proximo_idx = 0
-        while(not exit_loop):
+        while(True):
             
             data,_ = udtS.recvfrom(MAX_PAYLOAD_SIZE+20)
             if not data:
@@ -92,23 +94,73 @@ def multi_threaded_client(client, server):
                 client.sendall(ok_encode())
                 
                 # Cria uma thread para receber os pacotes
+                
                 print(f"[udp] Aguardando pacotes")
-                start_new_thread(receive_file_thread, (client, udtS))
-            elif (msgId(data) == 5):
-                # Recebeu mensagem de fim
-                print("[log] Arquivo recebido por completo")
+                # start_new_thread(receive_file_thread, (client, udtS))
+                proximo_idx = 0
+                while(True and len(pkts) > 0):
+                    data,_ = udtS.recvfrom(MAX_PAYLOAD_SIZE+20)
+                    if not data:
+                        print("[log] Conexão UDP encerrada precocemente")
+                        break
+                    data = bytearray(data)
+                    assert msgId(data) == 6
+                    (seq, _, _) = f.file_pkt_decode(data)
+                    print(f"[udp] Recebi o pacote {seq}, deveria ser entre {proximo_idx} e {proximo_idx + WINDOW_SIZE}")
+                    if (seq >= proximo_idx and seq <= proximo_idx+WINDOW_SIZE):
+                        print(f"[udp] Acknowledge do pacote {seq}")
+                        
+                        # Guarda o pacote na posição correspondente e envia o ACK
+                        # pkts.append(data) 
+                        pkts[seq] = data 
+                        client.sendall(ack_encode(seq))
+                        if (seq == proximo_idx):
+                            # Avança início da janela
+                            proximo_idx += 1
+                            print(f"[udp] Próximo está entre {proximo_idx} e {proximo_idx + WINDOW_SIZE}")
+                    print(f"[log] Recebeu todos? {all(p is not None for p in pkts)}")
+                    i = 0
+                    for p in pkts:
+                        if p is None:
+                            print(f"[log] Pacote: {i} é None")
+                        i += 1
+                    if all(p is not None for p in pkts):
+                        # Já recebeu todos
+                        break
+                # Terminou de receber o arquivo
                 f.pkts = pkts
-                exit_loop = True   
+                print("[log] Arquivo recebido por completo")
+                print("[log] Enviando mensagem de fim")
+                client.sendall(fim_encode())
+                
                 print(f"[log] Encerrando conexão UDP com o cliente "+
                       f"{infoClient[0]}: {infoClient[1]}")
                 udtS.close()
                 print(f"[log] Encerrando soquete TCP com o cliente "+
                       f"{infoClient[0]}: {infoClient[1]}")
+                client.close()
+                
                 print(f"[log] Escrevendo arquivo {f.nome_arq} em disco")
+                f.pkts = pkts 
                 f.assembleFile()
                 print(f"[log] Arquivo {f.nome_arq} disponível  em disco")
-                
                 break
+
+            # elif (msgId(data) == 5):
+                # # Recebeu mensagem de fim
+                # print("[log] Arquivo recebido por completo")
+                # f.pkts = pkts
+                # exit_loop = True   
+                # print(f"[log] Encerrando conexão UDP com o cliente "+
+                #       f"{infoClient[0]}: {infoClient[1]}")
+                # udtS.close()
+                # print(f"[log] Encerrando soquete TCP com o cliente "+
+                #       f"{infoClient[0]}: {infoClient[1]}")
+                # print(f"[log] Escrevendo arquivo {f.nome_arq} em disco")
+                # f.assembleFile()
+                # print(f"[log] Arquivo {f.nome_arq} disponível  em disco")
+                
+                # break
             # response = 'Server message: ' + data.decode('utf-8')
             # client.sendall(str.encode(response))
     client.close()
@@ -145,7 +197,9 @@ def main():
         Client, address = server.accept()
         print('[log] Conexão com sucesso: '+ address[0] 
               + ':' + str(address[1]))
-        start_new_thread(multi_threaded_client, (Client, server))
+        cltT = Thread(target=multi_threaded_client, args=(Client, server))
+        cltT.start()
+        # start_new_thread(multi_threaded_client, (Client, server))
         ThreadCount += 1
         print("Número da Thread: " + str(ThreadCount))
     print("[log] Finalizando servidor")
