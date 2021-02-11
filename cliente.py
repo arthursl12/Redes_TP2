@@ -12,12 +12,24 @@ from common import (WINDOW_SIZE, ack_decode, connection_decode, fim_encode,
 from filedivider import FileDivider
 
 TIMEOUT_MAX = 0.5
+f = FileDivider()
+recebeu_Tudo = False
+
+"""
+Mensagens e seus códigos:
+Hello       1
+Connection  2
+Info file   3
+OK          4
+Fim         5
+FILE        6
+ACK         7
+"""
 
 def logexit(err):
     print(err)
     sys.exit(1)
     
-
 def validIPv4(addr):
     try:
         socket.inet_pton(socket.AF_INET, addr)
@@ -32,41 +44,48 @@ def validIPv6(addr):
         return False
     return True
 
-
-"""
-Mensagens e seus códigos:
-Hello       1
-Connection  2
-Info file   3
-OK          4
-Fim         5
-FILE        6
-ACK         7
-"""
-f = FileDivider()
-recebeu_Tudo = False
-
-        
-def main():
-    # Parse dos argumentos
+def argParse():
+    """ Parse dos argumentos """
     parser = argparse.ArgumentParser()
     parser.add_argument("ip", help="IP do servidor {v4|v6}")
     parser.add_argument("porta", help="Porta do servidor", type=int)
     parser.add_argument("arquivo", help="Arquivo a ser enviado")
-    args = parser.parse_args()
-    
+    return parser.parse_args()
+
+def connectTCP(ip, port):
+    """ Conecta ao socket TCP do servidor """
     # Valida IPv4 ou IPv6 passado e usa a mesma versão
-    if validIPv4(args.ip):
+    if validIPv4(ip):
         tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    elif validIPv6(args.ip):
+    elif validIPv6(ip):
         tcp_socket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
     else:
        logexit("Protocolo desconhecido")
        
     # Conecta com o servidor
-    tcp_socket.connect((args.ip, args.porta))
-    infoCliente = tcp_socket.getsockname()
+    tcp_socket.connect((ip, port))
+    infoServer = tcp_socket.getsockname()
+    return tcp_socket, infoServer
+
+def connectUDP(ip, serverIP):
+    """ Conecta ao socket UDP do servidor """
+    # Cria socket UDP
+    if validIPv4(ip):
+        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    elif validIPv6(ip):
+        udp_socket = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+    else:
+        logexit("Protocolo desconhecido")
     
+    # Conecta ao socket UDP do servidor
+    udp_socket.bind((serverIP,0)) 
+    return udp_socket
+
+def getPortUDP(tcp_socket):
+    """ 
+    Usa o protocolo definido na especificação para conseguir a porta UDP do 
+    servidor, trocando mensagens de Hello e Connection
+    """
     # Envia a mensagem Hello
     print("[log] Enviando hello")
     tcp_socket.sendall(hello_encode())
@@ -81,27 +100,22 @@ def main():
     porta = connection_decode(data)
     print(f"[log] Recebido a porta UDP {porta}")
     
-    # Cria socket UDP
-    if validIPv4(args.ip):
-        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    elif validIPv6(args.ip):
-        udp_socket = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
-    else:
-        logexit("Protocolo desconhecido")
-    
-    # Conecta ao socket UDP do servidor
-    udp_socket.bind((infoCliente[0],0)) 
-    
+    return porta
+
+def infoFile(arquivo, tcp_socket):
+    """ 
+    Envia informações do arquivo ao servidor e aguarda confirmação dele para
+    começar o processo de envio do arquivo.
+    """
     # Envia a mensagem Info_file ao servidor, com o nome e tamanho do arquivo
     print("[log] Enviando info_file")
-    filename = args.arquivo
-    size = os.path.getsize(args.arquivo)
+    filename = arquivo
+    size = os.path.getsize(arquivo)
     try:
         tcp_socket.sendall(info_file_encode(filename,size))
     except Exception:
         logexit("Nome não permitido")
         
-    
     # Recebe a mensagem de OK do servidor
     print("[log] Aguardando ok do servidor")
     data = tcp_socket.recv(1024)
@@ -111,39 +125,95 @@ def main():
     if (tipo != 4):
         logexit("Mensagem de OK inválida")
     print("[log] Ok recebido")
-    
-    # Divide o arquivo em pacotes
-    print(f"[log] Criando os pacotes do arquivo {args.arquivo}")
-    f.loadFile(args.arquivo)
-    f.loadPackets()
-    print(f"[log] Foram criados {f.getQtdPacotes()} pacotes")
-    
-    global recebeu_Tudo
-    def ack_thread(server):
-        global recebeu_Tudo
-        print("[log] Entrando na thread para receber ACK's")
-        while(1):
-            data = server.recv(6)
-            if (len(data) == 0):
-            	print("[log] Servidor encerrou a conexão")
-            	break
-            data = bytearray(data)
-            tipo = msgId(data)
-            if (tipo == 7):
-                seq = ack_decode(data)
-                print(f"[udp] Ack de {seq} recebido")
-                f.setAck(seq, True)
-                print(f"[udp] Status do pacote {seq} é recebido")
-            elif (tipo == 5):
-                print(f"[log] Mensagem de fim recebida")
-                recebeu_Tudo = True
-                print(f"[log] Recebeu tudo (thread)? {recebeu_Tudo}")
-                break
-            else:
-                logexit("Mensagem inválida!")
-        print("[log] Fim da thread de recebimento")
 
-    
+def prepareFile(arquivo):
+    """
+    Divide o arquivo em pacotes, usando o gerenciador 'FileDivider'. Essa classe
+    auxiliará a janela deslizante
+    """
+    print(f"[log] Criando o gerenciador de pacotes do arquivo {arquivo}")
+    f.loadFile(arquivo)
+    f.loadPackets()
+    print(f"[log] Serão criados {f.getQtdPacotes()} pacotes")
+    print(f"[log] Os primeiros {WINDOW_SIZE} já foram criados")
+
+def ack_thread(server):
+    """
+    Thread auxiliar para receber as mensagens de controle do servidor enquanto
+    a janela deslizante é executada
+    """
+    global recebeu_Tudo
+    print("[log] Entrando na thread para receber ACK's")
+    while(1):
+        data = server.recv(6)
+        if (len(data) == 0):
+            print("[log] Servidor encerrou a conexão")
+            break
+        data = bytearray(data)
+        tipo = msgId(data)
+        if (tipo == 7):
+            seq = ack_decode(data)
+            print(f"[udp] Ack de {seq} recebido")
+            f.setAck(seq, True)
+            print(f"[udp] Status do pacote {seq} é recebido")
+        elif (tipo == 5):
+            print(f"[log] Mensagem de fim recebida")
+            recebeu_Tudo = True
+            break
+        else:
+            logexit("Mensagem inválida!")
+    print("[log] Fim da thread de recebimento")
+
+def slidingWindowRemaining(udp_socket, n_pkts, ip, porta, win_base):
+    """
+    Caso haja pacotes restantes a serem enviados, usa a janela deslizante para
+    terminar de enviá-los
+    """
+    idx_enviar = n_pkts - WINDOW_SIZE + 1 
+    if n_pkts < WINDOW_SIZE: 
+        idx_enviar = 0      # Se a janela for muito grande, comece a enviar do 0         
+    time_start = time.time()
+    while idx_enviar < n_pkts:
+        # Enquanto não enviar todos 
+        print(f"[log][rem] Enviando pacotes de {idx_enviar} até {n_pkts-1}")
+        
+        # Envie todos pelo socket UDP
+        for j in range(idx_enviar, n_pkts):
+            # Manda os pacotes dentro da janela para o servidor, via UDP
+            udp_socket.sendto(f[j], (ip, porta))
+            f.setSent(j, True)      # Marca cada um como enviado
+
+        print(f"[log][rem] Aguardando resposta ou timeout")
+        time_start = time.time()
+        agora = time.time()
+        while(agora - time_start < TIMEOUT_MAX):
+            # Enquanto não deu timeout
+            time.sleep(1)
+            if f.isAck(win_base):
+                break
+            agora = time.time()
+
+        if f.isAck(idx_enviar):
+            # Servidor já confirmou o primeiro, podemos "avançar a janela"
+            # e resetar o timer
+            idx_enviar += 1
+            time_start = time.time()
+        elif (agora - time_start > TIMEOUT_MAX):
+            # Timeout: servidor não confirmou os pacotes a tempo
+            print("[log][rem] TIMEOUT: resetando timer e enviando novamente")
+            for j in range(idx_enviar, n_pkts):
+                f.setSent(j, False)      # Reseta status de enviado
+            time_start = time.time()
+            continue
+
+def slidingWindow(tcp_socket, udp_socket, ip, porta):
+    """
+    Faz a janela deslizante para enviar o arquivo ao servidor via o soquete UDP,
+    cria uma thread para gerenciar as mensagens de controle que chegam pelo 
+    soquete TCP
+    """
+    global recebeu_Tudo
+
     # Cria a thread para receber os Acks do servidor
     ackT = Thread(target=ack_thread, args=(tcp_socket, ))
     ackT.start()
@@ -158,7 +228,7 @@ def main():
         print(f"[log] Enviando pacotes de {win_base} até {win_base+WINDOW_SIZE-1}")
         # Manda os pacotes dentro da janela para o servidor, via UDP
         for j in range(win_base, win_base+WINDOW_SIZE):
-            udp_socket.sendto(f[j], (args.ip, porta))
+            udp_socket.sendto(f[j], (ip, porta))
             f.setSent(j, True)      # Marca cada um como enviado
         
         print(f"[log] Aguardando resposta ou timeout")
@@ -184,60 +254,34 @@ def main():
             time_start = time.time()
             continue
 
-    # enviouTudo = True
-    # for k in range(f.getQtdPacotes()):
-    #     enviouTudo = enviouTudo and f.isAck(k)
-    
     if (not recebeu_Tudo):
-        # Tratamento dos pacotes restantes (para os quais a janela é muito grande)
-        idx_enviar = n_pkts - WINDOW_SIZE + 1 
-        if n_pkts < WINDOW_SIZE: 
-            idx_enviar = 0      # Se a janela for muito grande, comece a enviar do 0         
-        time_start = time.time()
-        while idx_enviar < n_pkts:
-            # Enquanto não enviar todos 
-            print(f"[log] Enviando pacotes de {idx_enviar} até {n_pkts-1}")
-            
-            # Envie todos pelo socket UDP
-            for j in range(idx_enviar, n_pkts):
-                # Manda os pacotes dentro da janela para o servidor, via UDP
-                udp_socket.sendto(f[j], (args.ip, porta))
-                f.setSent(j, True)      # Marca cada um como enviado
-
-            print(f"[log] Aguardando resposta ou timeout")
-            time_start = time.time()
-            agora = time.time()
-            while(agora - time_start < TIMEOUT_MAX):
-                # Enquanto não deu timeout
-                time.sleep(1)
-                if f.isAck(win_base):
-                    break
-                agora = time.time()
-
-            if f.isAck(idx_enviar):
-                # Servidor já confirmou o primeiro, podemos "avançar a janela"
-                # e resetar o timer
-                idx_enviar += 1
-                time_start = time.time()
-            elif (agora - time_start > TIMEOUT_MAX):
-                # Timeout: servidor não confirmou os pacotes a tempo
-                print("[log] TIMEOUT: resetando timer e enviando novamente")
-                for j in range(idx_enviar, n_pkts):
-                    f.setSent(j, False)      # Reseta status de enviado
-                time_start = time.time()
-                continue
+        slidingWindowRemaining(udp_socket, n_pkts, ip, porta, win_base)
+    
+    # Aguarda a mensagem Fim chegar na outra thread e ela encerrar
     ackT.join()
+    
+    # Confere se realmente recebeu tudo
     if (n_pkts > 0):
     	assert recebeu_Tudo
-    # print(f"[log] Recebeu tudo (fim)? {recebeu_Tudo}")
     print(f"[log] Fim do loop de envio")
+
+def main():
+    args = argParse()
+    
+    tcp_socket, infoServer = connectTCP(args.ip, args.porta)
+    porta = getPortUDP(tcp_socket)
+    udp_socket = connectUDP(args.ip, infoServer[0])
+    infoFile(arquivo=args.arquivo, tcp_socket=tcp_socket)
+    prepareFile(arquivo=args.arquivo)
+    slidingWindow(tcp_socket=tcp_socket, 
+                  udp_socket=udp_socket, 
+                  ip=args.ip, porta=porta)
+    
     udp_socket.close()
-    # print("[log] Enviando confirmação de fim")
-    # tcp_socket.sendall(fim_encode())
     tcp_socket.close()
+    print("[log] Cliente encerrado. Arquivo enviado.")
     
 
 if __name__ == "__main__":
     main()
-    print("[log] Cliente encerrado. Arquivo enviado.")
     

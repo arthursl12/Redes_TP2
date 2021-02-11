@@ -15,6 +15,10 @@ class FileDivider:
 
         
     def loadFile(self, nome_arq):
+        """
+        Carrega informações do arquivo 'nome_arq'. Aloca estruturas para guardar
+        pacotes e gerenciar seu envio. Sobrescreve o que estava antes
+        """
         self.nome_arq = nome_arq
         tam = os.path.getsize(nome_arq)
         qtd_pkts = tam//MAX_PAYLOAD_SIZE
