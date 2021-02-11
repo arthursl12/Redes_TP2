@@ -1,7 +1,6 @@
 import pytest
 from filedivider import FileDivider
 from fileassembler import FileAssembler
-import filecmp
 
 """
 Construtor: nome do arquivo, tamanho máximo do payload
@@ -13,28 +12,12 @@ isAck: dizer SE recebeu o ack
 SendFlag: dizer que mandou 
 isSentFlag: dizer SE mandou
 """
-    ### TODO: função/classe para remontar e testar se a divisão tá certa
-
-class TestFileAssembler:
-    def setup_method(self):
-        self.div = FileDivider("ttLong.txt")
-        self.div.loadPackets()
-        
-    def test_assembler(self):
-        lst = []
-        for i in range(self.div.getQtdPacotes()):
-            lst.append(self.div[i])
-        
-        self.f = FileAssembler("resLong.txt", pkts=lst)
-        self.f.assembleFile()
-        assert filecmp.cmp("ttLong.txt", "resLong.txt", shallow=False) == True
-
 class TestPacketDecoder:
     def setup_method(self):
         self.div = FileDivider("ttLong.txt")
         self.div.loadPackets()
         self.f = FileAssembler("resLong.txt", pkts=self.div.pkts)
-        self.f.assembleFile()
+        # self.f.assembleFile()
         
     def test_decoder(self):
         # Syntethic payload
