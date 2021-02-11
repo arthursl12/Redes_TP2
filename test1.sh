@@ -9,9 +9,15 @@ P=${1:-51511}
 rm -rf output
 ./cliente.py 0.0.0.0 $P pdf1.pdf & 
 ./cliente.py 0.0.0.0 $P ttLong.txt &
+./cliente.py 0.0.0.0 $P tt2Long.txt &
 wait
 
 if ! diff output/pdf1.pdf pdf1.pdf > /dev/null ; then
+    echo "PDF failed"
+    exit 1
+fi
+
+if ! diff output/tt2Long.txt tt2Long.txt > /dev/null ; then
     echo "PDF failed"
     exit 1
 fi
