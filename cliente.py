@@ -124,6 +124,9 @@ def main():
         print("[log] Entrando na thread para receber ACK's")
         while(1):
             data = server.recv(6)
+            if (len(data) == 0):
+            	print("[log] Servidor encerrou a conexão")
+            	break
             data = bytearray(data)
             tipo = msgId(data)
             if (tipo == 7):
@@ -224,7 +227,8 @@ def main():
                 time_start = time.time()
                 continue
     ackT.join()
-    assert recebeu_Tudo
+    if (n_pkts > 0):
+    	assert recebeu_Tudo
     # print(f"[log] Recebeu tudo (fim)? {recebeu_Tudo}")
     print(f"[log] Fim do loop de envio")
     udp_socket.close()

@@ -9,7 +9,7 @@ class FileAssembler:
         self.nome_arq = nome_arq
         self.outputFolder = "output"
         self.pkts = [None for _ in range(qtd_pkts)] or pkts
-        self.sent = [False for _ in range(qtd_pkts)]
+        self.assembled = [False for _ in range(qtd_pkts)]
         self.ack = [False for _ in range(qtd_pkts)]
         
     
@@ -56,8 +56,15 @@ class FileAssembler:
             (seq, size, pl) = self.file_pkt_decode(msg)
             assert seq == idx
             file.write(pl)
+            self.assembled[seq] = True
+            self.pkts[idx] = None
             
-        
+    def assembleRemaining(self):
+    	for i in range(len(self.pkts)):
+    		if (not self.assembled[i]):
+    			self.assemblePacket(i)
+    			
+    
     def assembleFile(self, idx=0):
         """
         Remonta o arquivo que está dividido em pacotes do tipo File, a partir

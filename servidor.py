@@ -133,6 +133,9 @@ def multi_threaded_client(client, server):
                 # Edge-case: arquivo vazio
                 if (len(pkts) == 0):
                     f.assemblePacket(None)
+                else:
+                    # Remontar pacotes restantes
+                    f.assembleRemaining()
                 # Terminou de receber o arquivo
                 # f.pkts = pkts
                 print("[log] Arquivo recebido por completo")
