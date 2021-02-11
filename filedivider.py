@@ -4,9 +4,18 @@ from common import MAX_PAYLOAD_SIZE, WINDOW_SIZE
 
 
 class FileDivider:
-    def __init__(self, nome_arq="null.txt"):
-        self.nome_arq = nome_arq
+    def __init__(self, nome_arq=None):
+        if nome_arq is None:
+            self.nome_arq = nome_arq
+            self.pkts = []
+            self.sent = []
+            self.ack = []
+        else:
+            self.loadFile(nome_arq)
+
         
+    def loadFile(self, nome_arq):
+        self.nome_arq = nome_arq
         tam = os.path.getsize(nome_arq)
         qtd_pkts = tam//MAX_PAYLOAD_SIZE
         if (tam % MAX_PAYLOAD_SIZE != 0):
@@ -39,8 +48,8 @@ class FileDivider:
     def loadPackets(self, idx=0):
         """
         Divide o arquivo com nome passado para o construtor em pacotes do tipo
-        File. A lista de pacotes gerados, em ordem a partir de 'idx', fica no 
-        atributo 'pkts' da classe.
+        File. A lista de pacotes gerados, em ordem a partir de 'idx' (default 0)
+        fica no atributo 'pkts' da classe.
         Gera pacotes a partir do índice 'idx' até 'idx'+tamanho da janela, os
         outros índices permanecem em 'None'
         """

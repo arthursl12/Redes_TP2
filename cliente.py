@@ -114,7 +114,7 @@ def main():
     
     # Divide o arquivo em pacotes
     print(f"[log] Criando os pacotes do arquivo {args.arquivo}")
-    f.nome_arq = args.arquivo
+    f.loadFile(args.arquivo)
     f.loadPackets()
     print(f"[log] Foram criados {f.getQtdPacotes()} pacotes")
     
@@ -150,6 +150,7 @@ def main():
     n_pkts = f.getQtdPacotes()
     
     while ((win_base+WINDOW_SIZE-1) < n_pkts):
+        f.loadPackets(win_base)
         # Enquanto houver pacotes a enviar
         print(f"[log] Enviando pacotes de {win_base} até {win_base+WINDOW_SIZE-1}")
         # Manda os pacotes dentro da janela para o servidor, via UDP

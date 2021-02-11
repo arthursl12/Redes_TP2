@@ -82,11 +82,12 @@ def multi_threaded_client(client, server):
                 print(f"[udp] Informações do arquivo: {nome}: {tam}")
 
                 # Alocar estruturas para janela deslizante do receptor
-                f = FileAssembler(nome)
+                
                 qtd_pkts = tam//MAX_PAYLOAD_SIZE
                 if (tam % MAX_PAYLOAD_SIZE != 0):
                     qtd_pkts += 1
                 pkts = [None for _ in range(qtd_pkts)]
+                f = FileAssembler(nome,qtd_pkts)
                 print(f"[udp] Alocado um vetor de {len(pkts)} posições")
 
                 # Envia o OK para o cliente
@@ -112,23 +113,28 @@ def multi_threaded_client(client, server):
                         
                         # Guarda o pacote na posição correspondente e envia o ACK
                         # pkts.append(data) 
-                        pkts[seq] = data 
+                        f.pkts[seq] = data
+                        f.ack[seq] = True
+                        f.assemblePacket(seq)
                         client.sendall(ack_encode(seq))
                         if (seq == proximo_idx):
                             # Avança início da janela
                             proximo_idx += 1
                             print(f"[udp] Próximo está entre {proximo_idx} e {proximo_idx + WINDOW_SIZE}")
-                    print(f"[log] Recebeu todos? {all(p is not None for p in pkts)}")
+                    print(f"[log] Recebeu todos? {all(p for p in f.ack)}")
                     i = 0
-                    for p in pkts:
+                    for p in f.ack:
                         if p is None:
                             print(f"[log] Pacote: {i} é None")
                         i += 1
-                    if all(p is not None for p in pkts):
+                    if all(p for p in f.ack):
                         # Já recebeu todos
                         break
+                # Edge-case: arquivo vazio
+                if (len(pkts) == 0):
+                    f.assemblePacket(None)
                 # Terminou de receber o arquivo
-                f.pkts = pkts
+                # f.pkts = pkts
                 print("[log] Arquivo recebido por completo")
                 print("[log] Enviando mensagem de fim")
                 client.sendall(fim_encode())
@@ -141,8 +147,8 @@ def multi_threaded_client(client, server):
                 client.close()
                 
                 print(f"[log] Escrevendo arquivo {f.nome_arq} em disco")
-                f.pkts = pkts 
-                f.assembleFile()
+                # f.pkts = pkts 
+                # f.assembleFile()
                 print(f"[log] Arquivo {f.nome_arq} disponível  em disco")
                 break
 

@@ -1,11 +1,17 @@
-from common import MAX_PAYLOAD_SIZE, WINDOW_SIZE, msgId
+import os
 from pathlib import Path
 
+from common import MAX_PAYLOAD_SIZE, WINDOW_SIZE, msgId
+
+
 class FileAssembler:
-    def __init__(self, nome_arq, pkts=[]):
+    def __init__(self, nome_arq, qtd_pkts=0, pkts=None):
         self.nome_arq = nome_arq
-        self.pkts = pkts
         self.outputFolder = "output"
+        self.pkts = [None for _ in range(qtd_pkts)] or pkts
+        self.sent = [False for _ in range(qtd_pkts)]
+        self.ack = [False for _ in range(qtd_pkts)]
+        
     
     def file_pkt_decode(self, msg):
         """
@@ -29,17 +35,42 @@ class FileAssembler:
         
         return (seq, size, payload)
     
+    def assemblePacket(self, idx):
+        """
+        Remonta pacote de índice 'idx' do arquivo. O arquivo de saída tem nome 
+        passado para o construtor e estará dentro da pasta 'output'.
+        """
+        Path(self.outputFolder).mkdir(exist_ok=True)
+        if (idx == None):
+            #Edge-case: arquivo vazio
+            with open(self.outputFolder + "/" + self.nome_arq,'ab') as file:
+                pass
+            return
+        if (idx > 0):
+            size = os.path.getsize(self.outputFolder + "/" + self.nome_arq)
+            print(f"[log] Arquivo possui {size}, sendo que deveria ter {idx*MAX_PAYLOAD_SIZE}")
+            assert size == idx*MAX_PAYLOAD_SIZE
+        with open(self.outputFolder + "/" + self.nome_arq,'ab') as file:
+            print(f"[log] Remontando arquivo com pacote de índice {idx}")
+            msg = self.pkts[idx]
+            (seq, size, pl) = self.file_pkt_decode(msg)
+            assert seq == idx
+            file.write(pl)
+            
+        
     def assembleFile(self, idx=0):
         """
-        Remonta o arquivo que está dividido em pacotes do tipo File, passados
-        para o construtor. O arquivo de saída tem nome passado para o construtor
-        O arquivo de saída estará dentro da pasta 'output'
+        Remonta o arquivo que está dividido em pacotes do tipo File, a partir
+        do índice 'idx' (default 0). O arquivo de saída tem nome passado para o 
+        construtor e estará dentro da pasta 'output'.
+        
         """
         Path(self.outputFolder).mkdir(exist_ok=True)
         i = 0
         with open(self.outputFolder + "/" + self.nome_arq,'wb') as file:
             while (i < idx):
                 file.seek(MAX_PAYLOAD_SIZE, 1)
+                i += 1
             print(f"[log] Remontando arquivo a partir do índice {idx}")
             # i = idx
             while (i < idx+WINDOW_SIZE and i < len(self.pkts)):
