@@ -115,10 +115,10 @@ def multi_threaded_client(client, server):
                         # pkts.append(data) 
                         f.pkts[seq] = data
                         f.ack[seq] = True
-                        f.assemblePacket(seq)
                         client.sendall(ack_encode(seq))
                         if (seq == proximo_idx):
                             # Avança início da janela
+                            f.assemblePacket(seq)
                             proximo_idx += 1
                             print(f"[udp] Próximo está entre {proximo_idx} e {proximo_idx + WINDOW_SIZE}")
                     print(f"[log] Recebeu todos? {all(p for p in f.ack)}")
