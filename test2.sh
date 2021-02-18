@@ -6,7 +6,7 @@ P=${1:-51511}
 # Leave server window open during debug (close with C-b :kill-pane)
 # tmux set-window-option remain-on-exit on
 rm -rf output
-./cliente.py 0.0.0.0 $P emptyfile.txt 
+./cliente.py 127.0.0.1 $P emptyfile.txt 
 
 if ! diff output/emptyfile.txt emptyfile.txt > /dev/null ; then
     echo "Empty failed"

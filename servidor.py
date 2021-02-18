@@ -20,7 +20,9 @@ def establishUDP(client, infoServer):
     Cria o soquete UDP e envia a informação da porta para o cliente
     """
     # Cria o socket UDP
-    udtS = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udtS = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+    udtS.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    udtS.setsockopt(socket.IPPROTO_IPV6,socket.IPV6_V6ONLY, 0)
     print(f"[udp] Socket UDP criado")
     
     # Usa o mesmo IP, mas uma porta dada pelo sistema
@@ -157,7 +159,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("porta", help="Porta do servidor", type=int)
     parser.add_argument("-v","--version", 
-                        help="Versão do IP do servidor", default="v4")
+                        help="Versão do IP do servidor", default="v6")
     args = parser.parse_args()
     
     # Inicialização do Servidor
@@ -165,6 +167,9 @@ def main():
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     elif (args.version == "v6"):
         server = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server.setsockopt(socket.IPPROTO_IPV6,socket.IPV6_V6ONLY, 0)
+        
     else:
         logexit("Protocolo desconhecido")
     print ("[log] Servidor iniciado")
