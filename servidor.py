@@ -55,7 +55,7 @@ def slidingWindow(client, udtS, pkts, fAssembler):
         assert msgId(data) == 6
         (seq, _, _) = fAssembler.file_pkt_decode(data)
         print(f"[udp] Recebi o pacote {seq}, "  +
-              f"deveria ser entre {proximo_idx}"+
+              f"deveria ser entre {proximo_idx} "+
               f"e {proximo_idx + WINDOW_SIZE}")
         
         # Se o pacote estiver dentro da janela, aceitá-lo
